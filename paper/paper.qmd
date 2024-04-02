@@ -1,0 +1,98 @@
+---
+title: "Analyzing the Dynamics of Home Advantage: A Statistical Investigation into Goals, Corners, and Shots on Target in Premier League Football"
+author: 
+  - Jerry Lu (Yen-Chia Lu)
+thanks: "Code and data are available at: https://github.com/Jerryluuuu/-Premier-League.git"
+date: 2 April, 2024
+date-format: long
+abstract: "This study explores the phenomenon of home advantage in the Premier League for the 2022–2023 campaign by analysing the correlation between goals, corners, and shots on target for the home club. Advanced statistical studies are performed using a season-long dataset to find trends and insights that clarify the significance of playing at home. Significant correlations that have practical consequences for clubs and coaching techniques as well as contributing to the scholarly discourse on sports analytics are highlighted by the findings. In light of the most recent season, this research provides fresh perspectives on the tactical and psychological factors affecting football game results."
+format: pdf
+number-sections: true
+bibliography: references.bib
+---
+
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+
+library(tidyverse)
+library(palmerpenguins)
+```
+
+
+# Introduction
+
+Since its founding in 1992, the Premier League has grown to become one of the world's most competitive and watched football competitions. Each of the twenty teams that compete each year plays 38 games, half of which are played at their home stadium and the other half away. The league is renowned for its competitive matches, fervent fandoms, and the exceptional skill level of its clubs and players. This competitive atmosphere creates an ideal setting for investigating several aspects of a team's performance, especially the home field advantage.
+
+In sports, the idea of home team advantage is widely accepted, and the Premier League is no different. Playing at home is frequently linked to a higher chance of success, which can be related to things like comfortable surroundings, the backing of local supporters, and the lack of travel fatigue. Metrics that are essential for assessing a team's attacking prowess at home games include Full Time Home Team Goals, Home Team Shots on Target (HST), and Home Team Corners (HC). Understanding how home advantage might affect a team's attacking dynamics and overall performance in a match depends on these factors.
+
+Not to be overlooked in this situation is the referee's involvement. Although it is the referees' responsibility to maintain fair play, their judgements have a big influence on how the game goes and how it ends. There is interest in the idea of "home bias," which holds that choices may unintentionally benefit the home team, for example, by giving them extra time off from injuries or more lenient rulings for fouls. Understanding the psychological effects of home advantage and the impact of outside variables on game outcomes can be gained by examining the relationship between referee decisions and home team performance indicators like goals, shots on target, and corners.
+
+Furthermore, a key factor in maximising home advantage is the home team's confidence. When combined with the encouragement of home fans, the psychological boost of playing in a familiar environment can improve team performance. Higher percentages of shots on target and in corners are signs of an aggressive offensive strategy that frequently reflects this confidence. We can measure the effect of home confidence on a team's performance by looking at these variables, which provides a greater understanding of the psychological and strategic components that contribute to the Premier League's home advantage occurrences. 
+
+
+
+# Data {#sec-data}
+
+You can and should cross-reference sections and sub-sections. We use @citeR and @rohan.
+
+# Model
+
+## Model set-up
+
+\begin{align} 
+y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
+\mu_i &= \alpha + \beta_i + \gamma_i\\
+\alpha &\sim \mbox{Normal}(0, 2.5) \\
+\beta &\sim \mbox{Normal}(0, 2.5) \\
+\gamma &\sim \mbox{Normal}(0, 2.5) \\
+\sigma &\sim \mbox{Exponential}(1)
+\end{align}
+
+We run the model in R [@citeR] using the `rstanarm` package of @rstanarm. We use the default priors from `rstanarm`.
+
+
+### Model justification
+
+We expect a positive relationship between the size of the wings and time spent aloft. In particular...
+
+We can use maths by including latex between dollar signs, for instance $\theta$.
+
+
+# Results
+
+# Discussion
+
+## First discussion point {#sec-first-point}
+
+If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this. 
+
+## Second discussion point
+
+## Third discussion point
+
+## Weaknesses and next steps
+
+Weaknesses and next steps should also be included.
+
+\newpage
+
+\appendix
+
+# Appendix {-}
+
+
+# Additional data details
+
+# Model details {#sec-model-details}
+
+## Posterior predictive check
+
+
+\newpage
+
+
+# References
+
+
