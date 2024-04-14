@@ -3,10 +3,9 @@ title: "Analyzing the Dynamics of Home Advantage: A Statistical Investigation in
 author: 
   - Jerry Lu (Yen-Chia Lu)
 thanks: "Code and data are available at: https://github.com/Jerryluuuu/-Premier-League.git"
-date: 2 April, 2024
+date: 17 April, 2024
 date-format: long
 abstract: "This study explores the phenomenon of home advantage in the Premier League for the 2022–2023 campaign by analysing the correlation between goals, corners, and shots on target for the home club. Advanced statistical studies are performed using a season-long dataset to find trends and insights that clarify the significance of playing at home. Significant correlations that have practical consequences for clubs and coaching techniques as well as contributing to the scholarly discourse on sports analytics are highlighted by the findings. In light of the most recent season, this research provides fresh perspectives on the tactical and psychological factors affecting football game results."
-format: pdf
 number-sections: true
 bibliography: references.bib
 ---
@@ -15,9 +14,22 @@ bibliography: references.bib
 #| include: false
 #| warning: false
 #| message: false
-
+####workspcae setup####
 library(tidyverse)
-library(palmerpenguins)
+library(here)
+library(rstanarm)
+library(modelsummary)
+library(knitr)
+library(dplyr)
+library(tibble)
+```
+
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+#### import data ####
+analysis_PL_data <- read_csv(here::here("data/analysis_data/analysis_PL_data.csv"))
 ```
 
 
@@ -31,11 +43,196 @@ Not to be overlooked in this situation is the referee's involvement. Although it
 
 Furthermore, a key factor in maximising home advantage is the home team's confidence. When combined with the encouragement of home fans, the psychological boost of playing in a familiar environment can improve team performance. Higher percentages of shots on target and in corners are signs of an aggressive offensive strategy that frequently reflects this confidence. We can measure the effect of home confidence on a team's performance by looking at these variables, which provides a greater understanding of the psychological and strategic components that contribute to the Premier League's home advantage occurrences. 
 
-
-
 # Data {#sec-data}
 
 You can and should cross-reference sections and sub-sections. We use @citeR and @rohan.
+
+
+```{r}
+#| label: tbl-PLhome
+#| tbl-cap: "Premier League Home Team data in 2023 season"
+#| echo: false
+
+Home_team_averages <- analysis_PL_data |>
+  group_by(`Home Team`) |>
+  summarise(Avg_FTHG = mean(`Full Time Home Team Goals`), Avg_HC = mean(`Home Team Corners`), Avg_HST = mean(`Home Team Shots on Target`)) |>
+  arrange(desc(Avg_FTHG)) |>
+  kable(
+    col.names = c("Team", "Avg FTHG", "Avg HC", "Avg HST"),
+    digits = 1
+  )
+print(Home_team_averages)
+```
+
+```{r}
+#| label: tbl-PLaway
+#| tbl-cap: "Premier League Away Team data in 2023 season"
+#| echo: false
+
+Away_team_averages <- analysis_PL_data |>
+  group_by(`Away Team`) |>
+  summarise(Avg_FTAG = mean(`Full Time Away Team Goals`), Avg_AC = mean(`Away Team Corners`), Avg_AST = mean(`Away Team Shots on Target`)) |>
+  arrange(desc(Avg_FTAG)) |>
+  kable(
+    col.names = c("Team", "Avg FTAG", "Avg AC", "Avg AST"),
+    digits = 1
+  )
+print(Away_team_averages)
+```
+
+```{r}
+#| label: fig-PLHChome
+#| tbl-cap: "Home Coners and Win rate relationship"
+#| echo: false
+#| message: false
+
+team_stats <- analysis_PL_data |>
+  group_by(`Home Team`) |>
+  summarise(
+    Avg_HC = mean(`Home Team Corners`),
+    Home_Wins = sum(`Full Time Result` == 'H'),
+    Games_Played = n(),
+    Home_Win_Rate = Home_Wins / Games_Played * 100
+  )
+ggplot(team_stats, aes(x = Avg_HC, y = Home_Win_Rate)) +
+  geom_point(aes(color = `Home Team`), size = 3) +  # Color coded by team
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +  # Add a linear regression line without confidence interval
+  labs(title = "Relationship Between Home Corners and Home Win Rate",
+       x = "Average Home Corners",
+       y = "Home Win Rate (%)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+#| label: fig-PLHCaway
+#| tbl-cap: "Away Coners and Win rate relationship"
+#| echo: false
+#| message: false
+
+team_stats_away <- analysis_PL_data %>%
+  group_by(`Away Team`) %>%
+  summarise(
+    Avg_AC = mean(`Away Team Corners`),
+    Away_Wins = sum(`Full Time Result` == 'A'),
+    Games_Played = n(),
+    Away_Win_Rate = Away_Wins / Games_Played * 100
+  )
+
+ggplot(team_stats_away, aes(x = Avg_AC, y = Away_Win_Rate)) +
+  geom_point(aes(color = `Away Team`), size = 3) +  # Color coded by team
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Add a linear regression line without confidence interval
+  labs(title = "Relationship Between Away Corners and Away Win Rate",
+       x = "Average Away Corners",
+       y = "Away Win Rate (%)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+#| label: fig-PLHSThome
+#| tbl-cap: "Home Team Shot on Target and Win rate relationship"
+#| echo: false
+#| message: false
+team_stats_home_hst <- analysis_PL_data %>%
+  group_by(`Home Team`) %>%
+  summarise(
+    Avg_HST = mean(`Home Team Shots on Target`, na.rm = TRUE),
+    Home_Wins = sum(`Full Time Result` == 'H'),
+    Games_Played = n(),
+    Home_Win_Rate = Home_Wins / Games_Played * 100
+  )
+ggplot(team_stats_home_hst, aes(x = Avg_HST, y = Home_Win_Rate)) +
+  geom_point(aes(color = `Home Team`), size = 3) +  # Color coded by team
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +  # Add a linear regression line without confidence interval
+  labs(title = "Relationship Between Home Shots on Target and Home Win Rate",
+       x = "Average Home Shots on Target",
+       y = "Home Win Rate (%)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+#| label: fig-PLHSTaway
+#| tbl-cap: "Away Team Shot on Target and Win rate relationship"
+#| echo: false
+#| message: false
+team_stats_away_ast <- analysis_PL_data %>%
+  group_by(`Away Team`) %>%
+  summarise(
+    Avg_AST = mean(`Away Team Shots on Target`, na.rm = TRUE),  
+    Away_Wins = sum(`Full Time Result` == 'A'),
+    Games_Played = n(),
+    Away_Win_Rate = Away_Wins / Games_Played * 100
+  )
+ggplot(team_stats_away_ast, aes(x = Avg_AST, y = Away_Win_Rate)) +
+  geom_point(aes(color = `Away Team`), size = 3) +  # Color coded by team
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Add a linear regression line without confidence interval
+  labs(title = "Relationship Between Away Shots on Target and Away Win Rate",
+       x = "Average Away Shots on Target",
+       y = "Away Win Rate (%)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+#| label: fig-PLhomevsaway
+#| tbl-cap: "Home ad Away win rates for each team in 2023 season"
+#| echo: false
+#| message: false
+home_win_rates <- analysis_PL_data |>
+  group_by(`Home Team`) |>
+  summarise(
+    Home_Wins = sum(`Full Time Result` == 'H'),
+    Home_Games = n(),
+    Home_Win_Rate = Home_Wins / Home_Games * 100
+  ) |>
+  rename(Team = `Home Team`)
+away_win_rates <- analysis_PL_data |>
+  group_by(`Away Team`) |>
+  summarise(
+    Away_Wins = sum(`Full Time Result` == 'A'),
+    Away_Games = n(),
+    Away_Win_Rate = Away_Wins / Away_Games * 100
+  ) |>
+  rename(Team = `Away Team`)
+combined_win_rates <- full_join(home_win_rates, away_win_rates, by = "Team")
+ggplot(combined_win_rates, aes(x = Team)) +
+  geom_bar(aes(y = Home_Win_Rate, fill = "Home"), stat = "identity", position = position_dodge(width = 0.9)) +
+  geom_bar(aes(y = Away_Win_Rate, fill = "Away"), stat = "identity", position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c("Home" = "green", "Away" = "purple")) +
+  labs(title = "Home and Away Win Rates for Each Team", x = "Team", y = "Win Rate (%)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+```
+
+```{r}
+#| label: fig-PLrefuree
+#| tbl-cap: "The relationship between refuree and win rate"
+#| echo: false
+#| message: false
+overall_home_win_rate <- mean(analysis_PL_data$`Full Time Result` == 'H')
+overall_away_win_rate <- mean(analysis_PL_data$`Full Time Result` == 'A')
+
+referee_influence <- analysis_PL_data |>
+  group_by(Referee) |>
+  summarise(
+    Home_Wins = sum(`Full Time Result` == 'H'),
+    Away_Wins = sum(`Full Time Result` == 'A'),
+    Games = n(),
+    Home_Win_Rate = Home_Wins / Games * 100,
+    Away_Win_Rate = Away_Wins / Games * 100,
+    Deviation_Home = Home_Win_Rate - overall_home_win_rate * 100,
+    Deviation_Away = Away_Win_Rate - overall_away_win_rate * 100
+  )
+ggplot(referee_influence, aes(x = Referee)) +
+  geom_bar(aes(y = Deviation_Home, fill = "Home"), stat = "identity", position = position_dodge()) +
+  geom_bar(aes(y = Deviation_Away, fill = "Away"), stat = "identity", position = position_dodge()) +
+  scale_fill_manual(values = c("Home" = "blue", "Away" = "red")) +
+  labs(title = "Referee Influence on Home and Away Win Rates", x = "Referee", y = "Deviation from Average Win Rate (%)") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
 
 # Model
 
@@ -61,6 +258,60 @@ We can use maths by including latex between dollar signs, for instance $\theta$.
 
 
 # Results
+```{r}
+#| echo: false
+#| eval: true
+#| warning: false
+#| message: false
+
+PL_data_first_model_rstanarm <-
+  readRDS(file = here::here("models/PL_model.rds"))
+```
+
+```{r}
+#| label: fig-models
+#| fig-cap: "The relationship of Full Time Home Team Goals on the Home Team shot on Target and Home Corners"  
+#| echo: false
+#| warning: false
+#| message: false
+
+draws <- 1000  # Number of simulations per shot on target
+
+# Create a tibble with proper length matching
+analysis_PL_data <-
+  tibble(
+    sigma = rep(rexp(n = draws, rate = 1), each = 11),  # Repeat each sigma value 11 times
+    beta_0 = rep(rnorm(n = draws, mean = 0, sd = 2.5), each = 11),
+    beta_1 = rep(rnorm(n = draws, mean = 15, sd = 2.5), each = 11),
+    `Home Team Shots on Target` = rep(0:10, times = draws),  # Ensure this matches the 11000 length
+    mu = beta_0 + beta_1 * `Home Team Shots on Target`
+  ) %>%
+  rowwise() %>%
+  mutate(
+    `Full Time Home Team Goals` = rnorm(n = 1, mean = mu, sd = sigma)
+  ) %>%
+  ungroup()  # Ensure data is ungrouped for plotting
+
+# Plotting the relationship
+ggplot(analysis_PL_data, aes(x = `Home Team Shots on Target`, y = `Full Time Home Team Goals`)) +
+  geom_point(alpha = 0.2, color = "blue") +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  theme_minimal() +
+  labs(title = "Relationship Between Shots on Target and Goals",
+       x = "Home Team Shots on Target",
+       y = "Full Time Home Team Goals")
+```
+
+```{r}
+#| echo: false
+#| eval: true
+#| label: tbl-modelresults
+#| tbl-cap: "Explanatory models of Premier League Full Time Home Team Goals on Home Team Shots on Target and Home Team Corners"
+#| warning: false
+
+modelsummary(PL_data_first_model_rstanarm)
+```
+
 
 # Discussion
 
