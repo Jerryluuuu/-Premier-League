@@ -30,8 +30,8 @@ analysis_PL_data <-
     `Away Team Corners` = AC,
     `Home Team Yellow Cards` = HY,
     `Away Team Yellow Cards` = AY,
-    `Home Team Red Cards` = HR,
-    `Away Team Red Cards` = AR
+    `Home Team Red Cards` = Hr,
+    `Away Team Red Cards` = Ar
   )
 
 #### Save data ####
