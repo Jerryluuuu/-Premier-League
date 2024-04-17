@@ -3,33 +3,29 @@ title: "Analyzing the Dynamics of Home Advantage: A Statistical Investigation in
 author: 
   - Jerry Lu (Yen-Chia Lu)
 thanks: "Code and data are available at: https://github.com/Jerryluuuu/-Premier-League.git"
-date: 17 April, 2024
+date: 18 April, 2024
 date-format: long
 abstract: "This study explores the phenomenon of home advantage in the Premier League for the 2022–2023 campaign by analysing the correlation between goals, corners, and shots on target for the home club. Advanced statistical studies are performed using a season-long dataset to find trends and insights that clarify the significance of playing at home. Significant correlations that have practical consequences for clubs and coaching techniques as well as contributing to the scholarly discourse on sports analytics are highlighted by the findings. In light of the most recent season, this research provides fresh perspectives on the tactical and psychological factors affecting football game results."
+format: pdf
+toc: true
 number-sections: true
 bibliography: references.bib
+pdf-engine: xelatex
 ---
 
 ```{r}
 #| include: false
 #| warning: false
 #| message: false
-####workspcae setup####
+
+#### Load Libraries ####
 library(tidyverse)
-library(here)
 library(rstanarm)
+library(here)
 library(modelsummary)
 library(knitr)
 library(dplyr)
 library(tibble)
-```
-
-```{r}
-#| include: false
-#| warning: false
-#| message: false
-#### import data ####
-analysis_PL_data <- read_csv(here::here("data/analysis_data/analysis_PL_data.csv"))
 ```
 
 
@@ -45,13 +41,21 @@ Furthermore, a key factor in maximising home advantage is the home team's confid
 
 # Data {#sec-data}
 
-You can and should cross-reference sections and sub-sections. We use @citeR and @rohan.
+The dataset was collected by the FootBall-Data.co and obtained from United kingdom @footballdatauk. This dataset excerpts from major football divisions and events. The main research object of this paper is to study the England Premier League from 2022-2023 season, it will be discussing the differences between home and away games and how the home field advantage affectes the team competition. I analysis the data in R(@citeR), with additional tools for support the analysis, including `tidyverse`[@citetidyverse],`here`[@citehere], `dplyr`[@citedplyr], `readr`[@citereadr], `modelsummary`[@citemodelsummary], `janitor`[@citejanitor],`tibble`[@citetibble], `ggplot2`[@citeggplot2], and research method is from @tellingstorieswithdata. 
 
+## Variables
+The dynamics of the English Premier League 2022–2023 season are the main focus of this study. I have carefully chosen a range of variables that are important to game outcomes in order to obtain insight into the subtleties of team performance both at home and away. They include "Full Time Team Goals," "Team Shots on Target," "Team Corners," as well as "Referees." These factors were picked because they have the capacity to have a big impact on how successful a team is. The fact that each team's performance can differ significantly between home and away games highlights the significant influence that venue dynamics have on football games. We hope to clarify the nuances of team dynamics and highlight the essential part that home and away games play in determining the results of matches by thoroughly examining these elements.
+
+## Data Visualizations and Summary Statistics
+In England Premier League, I assume that each team will have different performances at home and away games, from the average number of full time goals, number of corner kicks, and number of shot on target, which can greatly affect the game. The @tbl-PLhome is the table shows the average of full time home team goals, average number of home team corners and the average number of home team shot on target for each of the 20 teams in league. The @tbl-PLaway is the table shows the teams at away games that have huge difference compared to the games at home. For example, the Man City, Arsenal, and Liverpool are famous teams in the world, the full time team goals, team corners, and shot on target are all drop at away games.  
 
 ```{r}
 #| label: tbl-PLhome
 #| tbl-cap: "Premier League Home Team data in 2023 season"
 #| echo: false
+#| message: false
+#### import data ####
+analysis_PL_data <- read_csv(here::here("data/analysis_data/analysis_PL_data.csv"))
 
 Home_team_averages <- analysis_PL_data |>
   group_by(`Home Team`) |>
@@ -61,14 +65,14 @@ Home_team_averages <- analysis_PL_data |>
     col.names = c("Team", "Avg FTHG", "Avg HC", "Avg HST"),
     digits = 1
   )
-print(Home_team_averages)
+Home_team_averages
 ```
 
 ```{r}
 #| label: tbl-PLaway
 #| tbl-cap: "Premier League Away Team data in 2023 season"
 #| echo: false
-
+#| message: false
 Away_team_averages <- analysis_PL_data |>
   group_by(`Away Team`) |>
   summarise(Avg_FTAG = mean(`Full Time Away Team Goals`), Avg_AC = mean(`Away Team Corners`), Avg_AST = mean(`Away Team Shots on Target`)) |>
@@ -77,12 +81,15 @@ Away_team_averages <- analysis_PL_data |>
     col.names = c("Team", "Avg FTAG", "Avg AC", "Avg AST"),
     digits = 1
   )
-print(Away_team_averages)
+Away_team_averages
 ```
+### The relationship between win rates and team corners
+The two scatter plots examine the correlation between a football team's percentage of wins both at home and away and its corner kicks. The first graph @fig-PLHChome demonstrates a positive correlation, suggesting that teams with a greater average of corner kicks win more often at home. This implies that the number of corners could be a useful indicator of home game superiority. While there is still a positive tendency in the second graph @fig-PLHCaway, which focuses on away games, it is not as noticeable, suggesting that if corners are linked to wins on the road, the relationship may not be as strong as it is in home games. This could imply that in away games, other elements become more important. Teams are represented by color-coded dots in both graphs, which makes it simpler to see how each team is doing in terms of corner kicks and victory rates.
+
 
 ```{r}
 #| label: fig-PLHChome
-#| tbl-cap: "Home Coners and Win rate relationship"
+#| fig-cap: "Home Corners and Win rate relationship"
 #| echo: false
 #| message: false
 
@@ -106,12 +113,12 @@ ggplot(team_stats, aes(x = Avg_HC, y = Home_Win_Rate)) +
 
 ```{r}
 #| label: fig-PLHCaway
-#| tbl-cap: "Away Coners and Win rate relationship"
+#| fig-cap: "Away Coners and Win rate relationship"
 #| echo: false
 #| message: false
 
-team_stats_away <- analysis_PL_data %>%
-  group_by(`Away Team`) %>%
+team_stats_away <- analysis_PL_data |>
+  group_by(`Away Team`) |>
   summarise(
     Avg_AC = mean(`Away Team Corners`),
     Away_Wins = sum(`Full Time Result` == 'A'),
@@ -128,14 +135,20 @@ ggplot(team_stats_away, aes(x = Avg_AC, y = Away_Win_Rate)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+### The relationshp between win rates and teams shots on target 
+The association between a football team's the win percentage for home and away Premier League games and the number of shots on target is displayed in these two scatter plots. The average home shots on target and the home victory rate have a positive link, as seen in the first plot @fig-PLHSThome. It suggests that a better chance of winning in home games is correlated with increased precision. This could imply that a team's performance is greatly influenced by accurate attacking play at home.
+
+The association between average away shots on target and away victory rates is displayed in the second plot @fig-PLHSTaway. Similar to the first plot, there is a clear positive association, indicating that teams that are able to strike the target more often when playing away from home also have a tendency to win more. This upward trend is shown by the red trend line, and the distribution of the points points to a somewhat constant link between various teams.
+
+Teams are shown as color-coded dots in both plots, with team names and colours corresponded by the legend on the right. Although it's evident from both graphs that shooting accuracy and winning are correlated, it's crucial to remember that correlation does not imply causation and that other factors might also play a role in a team's performance. When analysing the variables influencing a team's performance, analysts may find these visualisations to be helpful resources.
 
 ```{r}
 #| label: fig-PLHSThome
-#| tbl-cap: "Home Team Shot on Target and Win rate relationship"
+#| fig-cap: "Home Team Shot on Target and Win rate relationship"
 #| echo: false
 #| message: false
-team_stats_home_hst <- analysis_PL_data %>%
-  group_by(`Home Team`) %>%
+team_stats_home_hst <- analysis_PL_data |>
+  group_by(`Home Team`) |>
   summarise(
     Avg_HST = mean(`Home Team Shots on Target`, na.rm = TRUE),
     Home_Wins = sum(`Full Time Result` == 'H'),
@@ -154,11 +167,11 @@ ggplot(team_stats_home_hst, aes(x = Avg_HST, y = Home_Win_Rate)) +
 
 ```{r}
 #| label: fig-PLHSTaway
-#| tbl-cap: "Away Team Shot on Target and Win rate relationship"
+#| fig-cap: "Away Team Shot on Target and Win rate relationship"
 #| echo: false
 #| message: false
-team_stats_away_ast <- analysis_PL_data %>%
-  group_by(`Away Team`) %>%
+team_stats_away_ast <- analysis_PL_data |>
+  group_by(`Away Team`) |>
   summarise(
     Avg_AST = mean(`Away Team Shots on Target`, na.rm = TRUE),  
     Away_Wins = sum(`Full Time Result` == 'A'),
@@ -175,9 +188,17 @@ ggplot(team_stats_away_ast, aes(x = Avg_AST, y = Away_Win_Rate)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+### Teams win rate on home games and away games
+
+This bar graph gives a visual comparison of different football teams' home and away victory percentages. The teams are arranged along the x-axis, while the victory percentages are displayed as percentages on the y-axis. Each team is represented by two bars, one in red for the away win rate and one in blue for the home win rate.
+
+We can quickly compare each team's home and away results thanks to the graphic. As a general rule, teams with more blue bars than red bars tend to win more often at home than away, which is consistent with the notion of "home advantage" in sports. Nonetheless, several teams exhibit comparable home and away victory percentages, indicating that they consistently play well at all venues. On the other hand, a team's heavy dependence on home advantage may be indicated by notable disparities between their home and away bars.
+
+In addition to being a simple tool for coaches, analysts, and fans to assess team performance, this bar chart may elicit more in-depth inquiries regarding the factors that influence each team's success both at home and away.
+
 ```{r}
 #| label: fig-PLhomevsaway
-#| tbl-cap: "Home ad Away win rates for each team in 2023 season"
+#| fig-cap: "Home ad Away win rates for each team in 2023 season"
 #| echo: false
 #| message: false
 home_win_rates <- analysis_PL_data |>
@@ -200,15 +221,20 @@ combined_win_rates <- full_join(home_win_rates, away_win_rates, by = "Team")
 ggplot(combined_win_rates, aes(x = Team)) +
   geom_bar(aes(y = Home_Win_Rate, fill = "Home"), stat = "identity", position = position_dodge(width = 0.9)) +
   geom_bar(aes(y = Away_Win_Rate, fill = "Away"), stat = "identity", position = position_dodge(width = 0.9)) +
-  scale_fill_manual(values = c("Home" = "green", "Away" = "purple")) +
+  scale_fill_manual(values = c("Home" = "blue", "Away" = "red")) +
   labs(title = "Home and Away Win Rates for Each Team", x = "Team", y = "Win Rate (%)") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
 ```
 
+### Can Referee influence the game results?
+The bars from @fig-PLrefuree show how each referee affects the win rates at home (blue) and away (red). If a blue bar stretches upward, it indicates that the home team has a better win percentage than usual when this referee is refereeing. On the other hand, a blue bar that extends downward would indicate a home victory rate that is below average. For away teams, the red bars show the same information.
+
+We can see from the bar chart that there are differences in the relationships between the performance of the home and away teams and the presence of different referees. For example, given the limited sample size of games each referee officiates, some referees show a noticeable positive variance for home teams, which could indicate a "home bias" or simply be a coincidence. Other referees, on the other hand, seem to have a detrimental effect on home teams' winning percentages. Additionally, other referees' impacts are more evenly distributed, with no variation for either the home or away team, according to the chart, indicating that the location of the game may not have a major influence on the result of the match.
+
 ```{r}
 #| label: fig-PLrefuree
-#| tbl-cap: "The relationship between refuree and win rate"
+#| fig-cap: "The relationship between refuree and win rate"
 #| echo: false
 #| message: false
 overall_home_win_rate <- mean(analysis_PL_data$`Full Time Result` == 'H')
@@ -235,29 +261,34 @@ ggplot(referee_influence, aes(x = Referee)) +
 ```
 
 # Model
+The statistical model used in this part of the analysis evaluates how specific home game factors affect Premier League scoring outcomes using a Bayesian framework. The model specifically looks into the link between two important variables, home team shots on target and home team corners, and the total number of goals scored by the home team (full time home team goals). This link points to the need to concentrate on evaluating the ways in which offensive plays, like as corner kicks and shots on goal, affect the scoring dynamics of home games.
 
+According to the model, the home team's goal totals have a normal distribution, with the predictors' linear relationship to the distribution mean ($μ_i$). A relationship of this kind can be expressed as follows: $μ_i$ = $β_0$ + $β_1$ * Home Team Shots on Target + $β_2$ * Home Team Corners, where $β_0$ is the intercept and $β_1$ and $β_2$ are the coefficients that indicate how each predictor affects the scoring result. These coefficients are important because they show how, when other things stay the same, the projected change in the number of goals scored per unit increase in shots on target and corners will be. $β_0$ with a zero mean, and $β_1$  with 10 means to avoid the negative of goals, also a 2.5 standard deviation, the model's priors for these coefficients and the intercept are normal distributions, which represent a balanced belief in the available prior knowledge about these parameters.
 ## Model set-up
 
-\begin{align} 
-y_i|\mu_i, \sigma &\sim \mbox{Normal}(\mu_i, \sigma) \\
-\mu_i &= \alpha + \beta_i + \gamma_i\\
-\alpha &\sim \mbox{Normal}(0, 2.5) \\
-\beta &\sim \mbox{Normal}(0, 2.5) \\
-\gamma &\sim \mbox{Normal}(0, 2.5) \\
-\sigma &\sim \mbox{Exponential}(1)
+\begin{align}
+y_i|\mu_i &\sim \text{Normal}(\mu_i, \sigma) \\
+\mu_i &= \beta_0 + \beta_1 \c x_i \\
+\beta_0 &\sim \text{Normal}(0, 2.5) \\
+\beta_1 &\sim \text{Normal}(0, 2.5) \\
+\sigma &\sim \text{Exponential}(1)
 \end{align}
 
-We run the model in R [@citeR] using the `rstanarm` package of @rstanarm. We use the default priors from `rstanarm`.
+
+We run the model in R [@citeR] using the `rstanarm` package of @citerstanarm. We use the default priors from `rstanarm`.
 
 
 ### Model justification
 
-We expect a positive relationship between the size of the wings and time spent aloft. In particular...
+The particulars of football data and the research questions asked make the choice of a Bayesian linear regression model appropriate for this investigation. Precisely expressing the degree of uncertainty in forecasts is essential in sports analytics, and the Bayesian framework performs admirably by combining observational data with past knowledge. This method is especially helpful for assessing how shots on target and corners might affect the result of scoring in home games. The model can adjust based on the data from the current season since normal priors, which are centred at zero, guarantee that there is no initial bias towards positive or negative impacts.
 
-We can use maths by including latex between dollar signs, for instance $\theta$.
+Additionally, the exponential prior set for the residual standard deviation accounts for the possibility of occasionally higher variances that are typical in sporting situations, with an expectation of normally moderate departures from expected values. This configuration takes into account the unpredictable aspects of football games that are missed by traditional measurements. Using this model allows us to calculate the effects of home advantage elements and gain a thorough grasp of the uncertainty associated with these calculations, both of which are important for making strategic decisions in sports-related situations.
 
 
 # Results
+The visualizations from @fig-models presented illustrate the positive correlation between the number of goals scored in Premier League matches and the home team's shots on target. This correlation is the outcome of the Bayesian linear regression model. A scatter plot with a regression line superimposed on top illustrates this relationship by showing that there is a tendency for the number of goals scored to rise in tandem with the home team's shots on target. The model's coefficient for home team shots on target, which is 0.362, further quantifies this tendency by suggesting that every extra shot on target is linked to a fractional rise in the expected number of goals scored by the home team.
+
+On the other hand, from the model summary @tbl-modelresults it shows the coefficient for home team corners is -0.061, indicating a marginally negative correlation between the total number of corners and the home team goals at the end of the game. The model's R-squared value of 0.364 means that roughly 36.4% of the variability in the home team's goals can be explained, which is a significant percentage considering the wide range of variables influencing football match outcomes. The R-squared adjusted score and the log-likelihood number, which is -586.446 and provides a gauge of the model's general plausibility in light of the observed data, both further reinforce the model's predictive power and fit. The findings offer valuable insights into the attacking dynamics of Premier League home games, as shots on target show up as a stronger indicator of successful scoring than the quantity of corner kicks.
 ```{r}
 #| echo: false
 #| eval: true
@@ -282,14 +313,14 @@ analysis_PL_data <-
   tibble(
     sigma = rep(rexp(n = draws, rate = 1), each = 11),  # Repeat each sigma value 11 times
     beta_0 = rep(rnorm(n = draws, mean = 0, sd = 2.5), each = 11),
-    beta_1 = rep(rnorm(n = draws, mean = 15, sd = 2.5), each = 11),
+    beta_1 = rep(rnorm(n = draws, mean = 10, sd = 2.5), each = 11),
     `Home Team Shots on Target` = rep(0:10, times = draws),  # Ensure this matches the 11000 length
     mu = beta_0 + beta_1 * `Home Team Shots on Target`
-  ) %>%
-  rowwise() %>%
+  ) |>
+  rowwise() |>
   mutate(
     `Full Time Home Team Goals` = rnorm(n = 1, mean = mu, sd = sigma)
-  ) %>%
+  ) |>
   ungroup()  # Ensure data is ungrouped for plotting
 
 # Plotting the relationship
@@ -309,41 +340,34 @@ ggplot(analysis_PL_data, aes(x = `Home Team Shots on Target`, y = `Full Time Hom
 #| tbl-cap: "Explanatory models of Premier League Full Time Home Team Goals on Home Team Shots on Target and Home Team Corners"
 #| warning: false
 
-modelsummary(PL_data_first_model_rstanarm)
+#modelsummary(PL_data_first_model_rstanarm)
 ```
 
 
 # Discussion
 
-## First discussion point {#sec-first-point}
+## Teams are more confident to shoot on targeet at home field {#sec-first-point}
 
-If my paper were 10 pages, then should be be at least 2.5 pages. The discussion is a chance to show off what you know and what you learnt from all this. 
+The primary goal of this paper is to investigate if home advantage exists for the League Premier League in football games. The study's findings demonstrate the critical role that shooting plays in a team's success, and they also show a positive relationship between goals scored and a team's capacity to make shots on goal. It demonstrates that making shots on target not only increases one's edge in the game but also plays a significant role in gaining home field advantage. This research can give the squad some excellent training direction so that players can hone their shooting techniques and gradually dismantle the opponent's defensive scheme. Coaches of the squad should therefore think about providing training to enhance players' ability to create and convert offensive possibilities. The team's shooting statistics can also be used to assess the team's offensive efficiency and trends, which can help opponents develop focused defensive strategies, as well as establish whether the team is attacking in a methodical manner. According to the data, the 20 teams' average number of shots on target while playing at home is higher than when playing away. This indicates that the team can attack more effectively when playing at home, and it also subtly demonstrates that having a home court undoubtedly has certain benefits.
 
-## Second discussion point
-
-## Third discussion point
+## Teams Corners may not be considered home advantage 
+Corner kicks are a crucial offensive tactic in modern football. Corner kicks are necessary to open up a situation when there is a heated situation in the game or when the score is tied or close. Even though some teams aren't as good as their opponents overall in many games, they may always prevail when they get corner kicks at crucial times. This article will examine the effect of corner kicks on the game to see whether you can improve your performance at home, as corner kicks have the greatest overall winning rate among different set kicks. According to the data, the impact of corner kicks on scoring in home games is surprisingly minor. This result casts doubt on the conventional wisdom of the game, which holds that corners present important chances for scoring. This essay obviously does not cover the opponent's defensive strategy, corner kick execution quality, or psychological pressure. However, these same characteristics might also account for the fact that corner kicks have no statistically significant impact on the outcome of the game. To fully comprehend the connection between corner kicks and the game, more research is needed on two of these: tactical arrangement and the impact of corner kick execution.
+## Referee and teams advantage
+Football forums have a strong tradition of discussing home advantage, and referees are a crucial and vital part of this discourse. Almost every team performs better at home than away, according to the research. According to a different set of data, certain referees significantly affect both the home and away game winning percentage. The team's penalty given by the referee throughout the match will significantly affect how the game turns out. The happiness of the home crowd with the referee will also be a factor. The outcome of a set kick, like a corner kick, can alter the direction of play. Evidently, referee prejudice has a significant negative effect on the team. The referee may typically impact the team's strategy by allowing them to choose between more aggressive attacking tactics and tougher defensive techniques based on the referee's penalty scale. VAR and other cutting-edge football technology can reduce the arbitrators' subjectivity. Sometimes the system will make a mistake, but the referee's unaided vision won't. Thus, it is true that referees have the power to influence the result of a game, particularly when biased officials are assigned to a team. The game will have easy control over how the game turns out.
 
 ## Weaknesses and next steps
 
-Weaknesses and next steps should also be included.
+### Weaknesses
+The potential limitation of the data set itself, which might not include all the subtle factors that affect home game performance—like player fatigue, team morale, or particular game circumstances like the weather or the significance of the game—is one of the study's weaknesses. Additionally, the model makes the assumption that predictors and outcomes follow a linear relationship, which could oversimplify the intricate dynamics of football games. Additionally, the effect of corner kicks (as indicated by the negative coefficient) begs the question of whether more complex measurements are required to accurately represent set-piece efficiency or if the quality of the underlying data is sufficient. The model's ability to explain things is another flaw. For a sport as unpredictable as football, an R-squared value of about 36% is rather large, but the model is still unable to explain a sizable fraction of the variation. This highlights the need for more thorough data collecting and analysis techniques by implying that additional unmeasured factors might be crucial in deciding match outcomes.
+
+### Next Steps
+The data set would need to be expanded to cover additional seasons and possibly more detailed information at the player or play level in order to address these shortcomings. Compiling information on player performance, tactical alignments, and in-game occurrences like possession shifts could enhance the examination and facilitate a more comprehensive comprehension of the elements that lead to home advantage.
+Future study may employ more sophisticated statistical models, such as machine learning algorithms that may capture non-linear connections and interactions between variables or hierarchical models that account for team-specific effects, in terms of analytically methodologies. 
+These additions would not only increase the findings' robustness but also offer clubs wanting to maximize their home advantage or offset the home team's advantages when playing away useful insights. Further investigation into this topic may also result in a better comprehension of how psychological elements such as referee bias affect the results of matches and the steps that may be taken to guarantee fair play.
 
 \newpage
-
-\appendix
-
-# Appendix {-}
-
-
-# Additional data details
-
-# Model details {#sec-model-details}
-
-## Posterior predictive check
-
-
-\newpage
-
 
 # References
+
 
 
