@@ -8,6 +8,7 @@
 library(tidyverse)
 library(dplyr)
 library(readr)
+library(arrow)
 #### Clean data ####
 ### import raw data ###
 raw_PL_data <- read_csv("data/raw_data/raw_PL_data.csv")
@@ -35,3 +36,4 @@ analysis_PL_data <-
 
 #### Save data ####
 write_csv(analysis_PL_data, "data/analysis_data/analysis_PL_data.csv")
+write_parquet(analysis_PL_data, "data/analysis_data/analysis_PL_data.parquet")
